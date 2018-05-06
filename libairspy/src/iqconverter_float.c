@@ -282,6 +282,15 @@ static void fir_interleaved_12(iqconverter_float_t *cnv, float *samples, int len
 	float *queue;
 	float acc = 0;
 
+#if  defined(FIR_STANDARD)
+
+	float *kernel_it;
+	float *queue_it;
+	int left;
+
+
+#endif
+
 	for (i = 0; i < len; i += 2)
 	{
 		queue = fir_queue + fir_index;
@@ -364,6 +373,8 @@ static void fir_interleaved_generic(iqconverter_float_t *cnv, float *samples, in
 		queue[0] = samples[i];
 
 		samples[i] = process_fir_taps(fir_kernel, queue, fir_len);
+
+		samples[i] = acc;
 
 		if (--fir_index < 0)
 		{
