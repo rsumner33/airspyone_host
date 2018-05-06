@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <limits.h>
 
-#define AIRSPY_RX_VERSION "1.0.5 23 April 2016"
+#define AIRSPY_RX_VERSION "1.0.2 13 Jul 2015"
 
 #ifndef bool
 typedef int bool;
@@ -91,8 +91,6 @@ int gettimeofday(struct timeval *tv, void* ignored)
 
 #define FLOAT32_EL_SIZE_BYTE (4)	/* 4bytes = 32bit float */
 #define INT16_EL_SIZE_BYTE (2)   /* 2bytes = 16bit int */
-#define INT12_EL_SIZE_BITS (12)
-#define INT8_EL_SIZE_BITS (8)
 
 #define FD_BUFFER_SIZE (16*1024)
 
@@ -116,11 +114,7 @@ int gettimeofday(struct timeval *tv, void* ignored)
 #define VGA_GAIN_MAX (15)
 #define MIXER_GAIN_MAX (15)
 #define LNA_GAIN_MAX (14)
-#define LINEARITY_GAIN_MAX (21)
-#define SENSITIVITY_GAIN_MAX (21)
 #define SAMPLES_TO_XFER_MAX_U64 (0x8000000000000000ull) /* Max value */
-
-#define MIN_SAMPLERATE_BY_VALUE (1000000)
 
 /* WAVE or RIFF WAVE file format containing data for AirSpy compatible with SDR# Wav IQ file */
 typedef struct 
@@ -192,15 +186,9 @@ typedef struct
 
 receiver_mode_t receiver_mode = RECEIVER_MODE_RX;
 
-uint32_t vga_gain = DEFAULT_VGA_IF_GAIN;
-uint32_t lna_gain = DEFAULT_LNA_GAIN;
-uint32_t mixer_gain = DEFAULT_MIXER_GAIN;
-
-uint32_t linearity_gain_val;
-bool linearity_gain = false;
-
-uint32_t sensitivity_gain_val;
-bool sensitivity_gain = false;
+unsigned int vga_gain = DEFAULT_VGA_IF_GAIN;
+unsigned int lna_gain = DEFAULT_LNA_GAIN;
+unsigned int mixer_gain = DEFAULT_MIXER_GAIN;
 
 /* WAV default values */
 uint16_t wav_format_tag=1; /* PCM8 or PCM16 */
@@ -250,8 +238,6 @@ uint32_t biast_val;
 
 bool serial_number = false;
 uint64_t serial_number_val;
-
-airspy_read_partid_serialno_t read_partid_serialno;
 
 static float
 TimevalDiff(const struct timeval *a, const struct timeval *b)
@@ -398,18 +384,6 @@ int rx_callback(airspy_transfer_t* transfer)
 				pt_rx_buffer = transfer->samples;
 				break;
 
-			case AIRSPY_SAMPLE_RAW:
-				if (packing_val)
-				{
-					bytes_to_write = transfer->sample_count * INT12_EL_SIZE_BITS / INT8_EL_SIZE_BITS;
-				}
-				else
-				{
-					bytes_to_write = transfer->sample_count * INT16_EL_SIZE_BYTE * 1;
-				}
-				pt_rx_buffer = transfer->samples;
-				break;
-
 			default:
 				bytes_to_write = 0;
 				pt_rx_buffer = NULL;
@@ -481,13 +455,11 @@ static void usage(void)
 		FREQ_HZ_MIN / FREQ_ONE_MHZ, FREQ_HZ_MAX / FREQ_ONE_MHZ, DEFAULT_FREQ_HZ / FREQ_ONE_MHZ);
 	printf("[-a sample_rate]: Set sample rate\n");
 	printf("[-t sample_type]: Set sample type, \n");
-	printf(" 0=FLOAT32_IQ, 1=FLOAT32_REAL, 2=INT16_IQ(default), 3=INT16_REAL, 4=U16_REAL, 5=RAW\n");
+	printf(" 0=FLOAT32_IQ, 1=FLOAT32_REAL, 2=INT16_IQ(default), 3=INT16_REAL, 4=U16_REAL\n");
 	printf("[-b biast]: Set Bias Tee, 1=enabled, 0=disabled(default)\n");
 	printf("[-v vga_gain]: Set VGA/IF gain, 0-%d (default %d)\n", VGA_GAIN_MAX, vga_gain);
 	printf("[-m mixer_gain]: Set Mixer gain, 0-%d (default %d)\n", MIXER_GAIN_MAX, mixer_gain);
 	printf("[-l lna_gain]: Set LNA gain, 0-%d (default %d)\n", LNA_GAIN_MAX, lna_gain);
-	printf("[-g linearity_gain]: Set linearity simplified gain, 0-%d\n", LINEARITY_GAIN_MAX);
-	printf("[-h sensivity_gain]: Set sensitivity simplified gain, 0-%d\n", SENSITIVITY_GAIN_MAX);
 	printf("[-n num_samples]: Number of samples to transfer (default is unlimited)\n");
 	printf("[-d]: Verbose mode\n");
 }
@@ -540,7 +512,7 @@ int main(int argc, char** argv)
 	double freq_hz_temp;
 	char str[20];
 
-	while( (opt = getopt(argc, argv, "r:ws:p:f:a:t:b:v:m:l:g:h:n:d")) != EOF )
+	while( (opt = getopt(argc, argv, "r:ws:p:f:a:t:b:v:m:l:n:d")) != EOF )
 	{
 		result = AIRSPY_SUCCESS;
 		switch( opt ) 
@@ -635,12 +607,6 @@ int main(int argc, char** argv)
 						wav_nb_byte_per_sample = (wav_nb_bits_per_sample / 8);
 					break;
 
-					case 5:
-						sample_type_val = AIRSPY_SAMPLE_RAW;
-						wav_nb_bits_per_sample = 12;
-						wav_nb_channels = 1;
-						break;
-
 					default:
 						/* Invalid value will display error */
 						sample_type_val = SAMPLE_TYPE_MAX+1;
@@ -663,16 +629,6 @@ int main(int argc, char** argv)
 
 			case 'l':
 				result = parse_u32(optarg, &lna_gain);
-			break;
-
-			case 'g':
-				linearity_gain = true;
-				result = parse_u32(optarg, &linearity_gain_val);		
-			break;
-
-			case 'h':
-				sensitivity_gain = true;
-				result = parse_u32(optarg, &sensitivity_gain_val);
 			break;
 
 			case 'n':
@@ -702,7 +658,7 @@ int main(int argc, char** argv)
 		sample_rate_val = sample_rate_u32;
 	}
 
-	bytes_to_xfer = samples_to_xfer * wav_nb_bits_per_sample * wav_nb_channels / 8;
+	bytes_to_xfer = samples_to_xfer * wav_nb_byte_per_sample * wav_nb_channels;
 
 	if (samples_to_xfer >= SAMPLES_TO_XFER_MAX_U64) {
 		printf("argument error: num_samples must be less than %s/%sMio\n",
@@ -729,13 +685,6 @@ int main(int argc, char** argv)
 	receiver_mode = RECEIVER_MODE_RX;
 	if( receive_wav ) 
 	{
-		if (sample_type_val == AIRSPY_SAMPLE_RAW)
-		{
-			printf("The RAW sampling mode is not compatible with Wave files\n");
-			usage();
-			return EXIT_FAILURE;
-		}
-
 		time (&rawtime);
 		timeinfo = localtime (&rawtime);
 		receiver_mode = RECEIVER_MODE_RX;
@@ -788,25 +737,6 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	if(linearity_gain_val > LINEARITY_GAIN_MAX) {
-		printf("argument error: linearity_gain out of range\n");
-		usage();
-		return EXIT_FAILURE;
-	}
-
-	if(sensitivity_gain_val > SENSITIVITY_GAIN_MAX) {
-		printf("argument error: sensitivity_gain out of range\n");
-		usage();
-		return EXIT_FAILURE;
-	}
-
-	if( (linearity_gain == true) && (sensitivity_gain == true) )
-	{
-		printf("argument error: linearity_gain and sensitivity_gain are both set (choose only one option)\n");
-		usage();
-		return EXIT_FAILURE;
-	}
-
 	if(verbose == true)
 	{
 		uint32_t serial_number_msb_val;
@@ -821,25 +751,9 @@ int main(int argc, char** argv)
 		printf("frequency_MHz -f %.6fMHz (%sHz)\n",((double)freq_hz/(double)FREQ_ONE_MHZ), u64toa(freq_hz, &ascii_u64_data1) );
 		printf("sample_type -t %d\n", sample_type_val);
 		printf("biast -b %d\n", biast_val);
-
-		if( (linearity_gain == false) && (sensitivity_gain == false) )
-		{
-			printf("vga_gain -v %u\n", vga_gain);
-			printf("mixer_gain -m %u\n", mixer_gain);
-			printf("lna_gain -l %u\n", lna_gain);
-		} else
-		{
-			if( linearity_gain == true)
-			{
-				printf("linearity_gain -g %u\n", linearity_gain_val);
-			}
-
-			if( sensitivity_gain == true)
-			{
-				printf("sensitivity_gain -h %u\n", sensitivity_gain_val);
-			}
-		}
-
+		printf("vga_gain -v %u\n", vga_gain);
+		printf("mixer_gain -m %u\n", mixer_gain);
+		printf("lna_gain -l %u\n", lna_gain);
 		if( limit_num_samples ) {
 			printf("num_samples -n %s (%sM)\n",
 							u64toa(samples_to_xfer, &ascii_u64_data1),
@@ -871,47 +785,24 @@ int main(int argc, char** argv)
 		}
 	}
 
-	result = airspy_set_sample_type(device, sample_type_val);
-	if (result != AIRSPY_SUCCESS) {
-		printf("airspy_set_sample_type() failed: %s (%d)\n", airspy_error_name(result), result);
+	airspy_get_samplerates(device, &count, 0);
+
+	if (sample_rate_val < 0 || sample_rate_val >= count)
+	{
+		printf("argument error: sample rate out of range\n");
 		airspy_close(device);
 		airspy_exit();
 		return EXIT_FAILURE;
 	}
-
-	airspy_get_samplerates(device, &count, 0);
 
 	supported_samplerates = (uint32_t *) malloc(count * sizeof(uint32_t));
 	airspy_get_samplerates(device, supported_samplerates, count);
-
-	if (sample_rate_val <= MIN_SAMPLERATE_BY_VALUE)
-	{
-		if (sample_rate_val < count)
-		{
-			wav_sample_per_sec = supported_samplerates[sample_rate_val];
-		}
-		else
-		{
-			free(supported_samplerates);
-			printf("argument error: unsupported sample rate\n");
-			airspy_close(device);
-			airspy_exit();
-			return EXIT_FAILURE;
-		}
-	}
-	else
-	{
-		wav_sample_per_sec = sample_rate_val;
-	}
-
+	wav_sample_per_sec = supported_samplerates[sample_rate_val];
 	free(supported_samplerates);
 
-	result = airspy_set_samplerate(device, sample_rate_val);
-	if (result != AIRSPY_SUCCESS) {
-		printf("airspy_set_samplerate() failed: %s (%d)\n", airspy_error_name(result), result);
-		airspy_close(device);
-		airspy_exit();
-		return EXIT_FAILURE;
+	if (wav_nb_channels == 1)
+	{
+		wav_sample_per_sec *= 2;
 	}
 
 	if (verbose)
@@ -940,6 +831,22 @@ int main(int argc, char** argv)
 			airspy_exit();
 			return EXIT_FAILURE;
 		}
+	}
+
+	result = airspy_set_samplerate(device, sample_rate_val);
+	if( result != AIRSPY_SUCCESS ) {
+		printf("airspy_set_samplerate() failed: %s (%d)\n", airspy_error_name(result), result);
+		airspy_close(device);
+		airspy_exit();
+		return EXIT_FAILURE;
+	}
+
+	result = airspy_set_sample_type(device, sample_type_val);
+	if( result != AIRSPY_SUCCESS ) {
+		printf("airspy_set_sample_type() failed: %s (%d)\n", airspy_error_name(result), result);
+		airspy_close(device);
+		airspy_exit();
+		return EXIT_FAILURE;
 	}
 
 	result = airspy_set_rf_bias(device, biast_val);
@@ -983,39 +890,19 @@ int main(int argc, char** argv)
 	signal(SIGABRT, &sigint_callback_handler);
 #endif
 
-	if( (linearity_gain == false) && (sensitivity_gain == false) )
-	{
-		result = airspy_set_vga_gain(device, vga_gain);
-		if( result != AIRSPY_SUCCESS ) {
-			printf("airspy_set_vga_gain() failed: %s (%d)\n", airspy_error_name(result), result);
-		}
+	result = airspy_set_vga_gain(device, vga_gain);
+	if( result != AIRSPY_SUCCESS ) {
+		printf("airspy_set_vga_gain() failed: %s (%d)\n", airspy_error_name(result), result);
+	}
 
-		result = airspy_set_mixer_gain(device, mixer_gain);
-		if( result != AIRSPY_SUCCESS ) {
-			printf("airspy_set_mixer_gain() failed: %s (%d)\n", airspy_error_name(result), result);
-		}
+	result = airspy_set_mixer_gain(device, mixer_gain);
+	if( result != AIRSPY_SUCCESS ) {
+		printf("airspy_set_mixer_gain() failed: %s (%d)\n", airspy_error_name(result), result);
+	}
 
-		result = airspy_set_lna_gain(device, lna_gain);
-		if( result != AIRSPY_SUCCESS ) {
-			printf("airspy_set_lna_gain() failed: %s (%d)\n", airspy_error_name(result), result);
-		}
-	} else
-	{
-		if( linearity_gain == true )
-		{
-			result =  airspy_set_linearity_gain(device, linearity_gain_val);
-			if( result != AIRSPY_SUCCESS ) {
-				printf("airspy_set_linearity_gain() failed: %s (%d)\n", airspy_error_name(result), result);
-			}
-		}
-
-		if( sensitivity_gain == true )
-		{
-			result =  airspy_set_sensitivity_gain(device, sensitivity_gain_val);
-			if( result != AIRSPY_SUCCESS ) {
-				printf("airspy_set_sensitivity_gain() failed: %s (%d)\n", airspy_error_name(result), result);
-			}
-		}
+	result = airspy_set_lna_gain(device, lna_gain);
+	if( result != AIRSPY_SUCCESS ) {
+		printf("airspy_set_lna_gain() failed: %s (%d)\n", airspy_error_name(result), result);
 	}
 
 	result = airspy_start_rx(device, rx_callback, NULL);
@@ -1044,7 +931,7 @@ int main(int argc, char** argv)
 		(do_exit == false) )
 	{
 		float average_rate_now = average_rate * 1e-6f;
-		sprintf(str, "%2.3f", average_rate_now);
+		sprintf(str, "%2.2f", average_rate_now);
 		average_rate_now = 9.5f;
 		printf("Streaming at %5s MSPS\n", str);
 		if ((limit_num_samples == true) && (bytes_to_xfer == 0))

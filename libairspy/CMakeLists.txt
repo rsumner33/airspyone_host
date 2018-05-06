@@ -67,6 +67,7 @@ if(MSVC)
 	set(THREADS_USE_PTHREADS_WIN32 true)
 else()
 	add_definitions(-Wall)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu90")
 
 	INCLUDE(TestBigEndian)
 	TEST_BIG_ENDIAN(BIGENDIAN)
@@ -100,7 +101,7 @@ ENDIF(CMAKE_CROSSCOMPILING)
 
 set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix \${prefix})
-set(libdir \${exec_prefix}/lib${LIB_SUFFIX})
+set(libdir \${exec_prefix}/lib)
 set(includedir \${prefix}/include)
 
 CONFIGURE_FILE(
@@ -110,7 +111,7 @@ CONFIGURE_FILE(
 
 INSTALL(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/libairspy.pc
-    DESTINATION lib${LIB_SUFFIX}/pkgconfig
+    DESTINATION lib/pkgconfig
 )
 
 ########################################################################

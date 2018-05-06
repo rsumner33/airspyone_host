@@ -1,8 +1,8 @@
 /*
 Copyright (c) 2012, Jared Boone <jared@sharebrained.com>
 Copyright (c) 2013, Michael Ossmann <mike@ossmann.com>
-Copyright (c) 2013-2016, Benjamin Vernoux <bvernoux@airspy.com>
-Copyright (C) 2013-2016, Youssef Touil <youssef@airspy.com>
+Copyright (c) 2013/2014, Benjamin Vernoux <bvernoux@airspy.com>
+Copyright (C) 2013/2014, Youssef Touil <youssef@airspy.com>
 
 All rights reserved.
 
@@ -28,10 +28,10 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #include <stdint.h>
 #include "airspy_commands.h"
 
-#define AIRSPY_VERSION "1.0.9"
+#define AIRSPY_VERSION "1.0.6"
 #define AIRSPY_VER_MAJOR 1
 #define AIRSPY_VER_MINOR 0
-#define AIRSPY_VER_REVISION 9
+#define AIRSPY_VER_REVISION 6
 
 #ifdef _WIN32
 	 #define ADD_EXPORTS
@@ -87,11 +87,8 @@ enum airspy_sample_type
 	AIRSPY_SAMPLE_INT16_IQ = 2,     /* 2 * 16bit int per sample */
 	AIRSPY_SAMPLE_INT16_REAL = 3,   /* 1 * 16bit int per sample */
 	AIRSPY_SAMPLE_UINT16_REAL = 4,  /* 1 * 16bit unsigned int per sample */
-	AIRSPY_SAMPLE_RAW = 5,          /* Raw packed samples from the device */
-	AIRSPY_SAMPLE_END = 6           /* Number of supported sample types */
+	AIRSPY_SAMPLE_END = 5           /* Number of supported sample types */
 };
-
-#define MAX_CONFIG_PAGE_SIZE (0x10000)
 
 struct airspy_device;
 
@@ -100,7 +97,6 @@ typedef struct {
 	void* ctx;
 	void* samples;
 	int sample_count;
-	uint64_t dropped_samples;
 	enum airspy_sample_type sample_type;
 } airspy_transfer_t, airspy_transfer;
 
@@ -128,12 +124,7 @@ extern ADDAPI int ADDCALL airspy_open(struct airspy_device** device);
 extern ADDAPI int ADDCALL airspy_close(struct airspy_device* device);
 
 extern ADDAPI int ADDCALL airspy_get_samplerates(struct airspy_device* device, uint32_t* buffer, const uint32_t len);
-
-/* Parameter samplerate can be either the index of a samplerate or directly its value in Hz within the list returned by airspy_get_samplerates() */
 extern ADDAPI int ADDCALL airspy_set_samplerate(struct airspy_device* device, uint32_t samplerate);
-
-extern ADDAPI int ADDCALL airspy_set_conversion_filter_float32(struct airspy_device* device, const float *kernel, const uint32_t len);
-extern ADDAPI int ADDCALL airspy_set_conversion_filter_int16(struct airspy_device* device, const int16_t *kernel, const uint32_t len);
 
 extern ADDAPI int ADDCALL airspy_start_rx(struct airspy_device* device, airspy_sample_block_cb_fn callback, void* rx_ctx);
 extern ADDAPI int ADDCALL airspy_stop_rx(struct airspy_device* device);
@@ -143,9 +134,6 @@ extern ADDAPI int ADDCALL airspy_is_streaming(struct airspy_device* device);
 
 extern ADDAPI int ADDCALL airspy_si5351c_write(struct airspy_device* device, uint8_t register_number, uint8_t value);
 extern ADDAPI int ADDCALL airspy_si5351c_read(struct airspy_device* device, uint8_t register_number, uint8_t* value);
-
-extern ADDAPI int ADDCALL airspy_config_write(struct airspy_device* device, const uint8_t page_index, const uint16_t length, unsigned char *data);
-extern ADDAPI int ADDCALL airspy_config_read(struct airspy_device* device, const uint8_t page_index, const uint16_t length, unsigned char *data);
 
 extern ADDAPI int ADDCALL airspy_r820t_write(struct airspy_device* device, uint8_t register_number, uint8_t value);
 extern ADDAPI int ADDCALL airspy_r820t_read(struct airspy_device* device, uint8_t register_number, uint8_t* value);
@@ -194,12 +182,6 @@ extern ADDAPI int ADDCALL airspy_set_lna_agc(struct airspy_device* device, uint8
 */
 extern ADDAPI int ADDCALL airspy_set_mixer_agc(struct airspy_device* device, uint8_t value);
 
-/* Parameter value: 0..21 */
-extern ADDAPI int ADDCALL airspy_set_linearity_gain(struct airspy_device* device, uint8_t value);
-
-/* Parameter value: 0..21 */
-extern ADDAPI int ADDCALL airspy_set_sensitivity_gain(struct airspy_device* device, uint8_t value);
-
 /* Parameter value shall be 0=Disable BiasT or 1=Enable BiasT */
 extern ADDAPI int ADDCALL airspy_set_rf_bias(struct airspy_device* dev, uint8_t value);
 
@@ -208,9 +190,6 @@ extern ADDAPI int ADDCALL airspy_set_packing(struct airspy_device* device, uint8
 
 extern ADDAPI const char* ADDCALL airspy_error_name(enum airspy_error errcode);
 extern ADDAPI const char* ADDCALL airspy_board_id_name(enum airspy_board_id board_id);
-
-/* Parameter sector_num shall be between 2 & 13 (sector 0 & 1 are reserved) */
-extern ADDAPI int ADDCALL airspy_spiflash_erase_sector(struct airspy_device* device, const uint16_t sector_num);
 
 #ifdef __cplusplus
 } // __cplusplus defined.

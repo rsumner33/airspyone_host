@@ -51,7 +51,6 @@ static struct option long_options[] = {
 	{ "register", required_argument, 0, 'n' },
 	{ "write", required_argument, 0, 'w' },
 	{ "read", no_argument, 0, 'r' },
-	{ "serial", required_argument, 0, 's' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -274,7 +273,7 @@ int main(int argc, char** argv) {
 	result = AIRSPY_ERROR_OTHER;
 	option_index = 0;
 	optind = 0;
-	while( (opt = getopt_long(argc, argv, "cn:rw:s:", long_options, &option_index)) != EOF ) {
+	while( (opt = getopt_long(argc, argv, "cn:rw:", long_options, &option_index)) != EOF ) {
 		switch( opt ) {
 		case 'n':
 			result = parse_int(optarg, &register_number);
@@ -297,12 +296,9 @@ int main(int argc, char** argv) {
 			break;
 		
 		case 'c':
-			result = dump_configuration(device);
+			dump_configuration(device);
 			break;
-		case 's':
-			serial_number = true;
-			result = parse_u64(optarg, &serial_number_val);
-			break;
+
 		default:
 			usage();
 		}
