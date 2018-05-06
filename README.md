@@ -23,20 +23,13 @@ AirSpy: http://www.airspy.com
 
 ### For VisualStudio 2013 or later:
 
-* `git clone https://github.com/airspy/airspyone_host.git host`
 * Download https://github.com/libusb/libusb/releases/download/v1.0.20/libusb-1.0.20.7z
-* Extract **libusb-1.0.20.7z** to host directory
-  * You should have **host\libusb-1.0.20**
-    * Inside this directory there is README.txt, libusb-1.0.def and some directories
+* Extract libusb-1.0.20.7z to host directory
 * Download ftp://mirrors.kernel.org/sourceware/pthreads-win32/pthreads-w32-2-9-1-release.zip
-* Extract **pthreads-w32-2-9-1-release.zip** to host directory
-  * You should have **host\libpthread-2-9-1-win**
-    * Inside this directory there is lot of README files and some directories (dll, include, lib)
-* Launch host\libairspy\vc\airspy_2013.sln with VisualStudio 2013, choose **Release** and **Build Solution**
+* Extract pthreads-w32-2-9-1-release.zip to host directory
+* Launch host\libairspy\vc\airspy.sln with VisualStudio, choose Release and Build
 
 ### For MinGW:
-
-`git clone https://github.com/airspy/airspyone_host.git host`
 
 `cd host`
 
@@ -69,11 +62,11 @@ Debug version:
 
 ### Build host software on Linux:
 
-`wget https://github.com/airspy/airspyone_host/archive/master.zip`
+`wget https://github.com/airspy/host/archive/master.zip`
 
 `unzip master.zip`
 
-`cd airspyone_host-master`
+`cd host-master`
 
 `mkdir build`
 
@@ -89,37 +82,10 @@ Debug version:
 
 ## Clean CMake temporary files/dirs:
 
-`cd airspyone_host-master/build`
+`cd host-master/build`
 
 `rm -rf *`
 
-## How to build host software on FreeBSD.
-
-### Get the prerequisites (from root)
-
-`pkg install git cmake`
-
-### Build
-
-`git clone https:\\github.com\airspy\airspyone_host.git`
-
-`cd airspyone_host`
-
-`mkdir build`
-
-`cd build`
-
-`cmake .. -DLIBUSB_LIBRARIES=/usr/lib/libusb.so`
-
-`make`
-
-(from root)
-`make install`
-
-### Add users to group plugdev
-
-(from root)
-`useradd -a -G plugdev <user>`
 
 ## Principal authors:
 
