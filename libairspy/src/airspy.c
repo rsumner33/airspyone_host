@@ -504,7 +504,7 @@ static void* transfer_threadproc(void* arg)
 		if (error < 0)
 		{
 			if (error != LIBUSB_ERROR_INTERRUPTED)
-				device->streaming = false;
+			device->streaming = false;
 		}
 	}
 
@@ -1519,7 +1519,8 @@ extern "C"
 		iqconverter_int16_free(device->cnv_i);
 		device->cnv_i = iqconverter_int16_create(kernel, len);
 
-		return AIRSPY_SUCCESS;
+			return AIRSPY_SUCCESS;
+		}
 	}
 
 	int ADDCALL airspy_set_lna_gain(airspy_device_t* device, uint8_t value)

@@ -251,6 +251,8 @@ uint32_t biast_val;
 bool serial_number = false;
 uint64_t serial_number_val;
 
+airspy_read_partid_serialno_t read_partid_serialno;
+
 static float
 TimevalDiff(const struct timeval *a, const struct timeval *b)
 {
