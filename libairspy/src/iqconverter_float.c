@@ -252,11 +252,8 @@ static void fir_interleaved_8(iqconverter_float_t *cnv, float *samples, int len)
 	float *queue;
 	float acc;
 
-	for (i = 0; i < len; i += 2)
+	if (len >= 4)
 	{
-		queue = fir_queue + fir_index;
-
-		queue[0] = samples[i];
 
 		acc = fir_kernel[0] * (queue[0] + queue[8 - 1])
 			+ fir_kernel[1] * (queue[1] + queue[8 - 2])
